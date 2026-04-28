@@ -6,7 +6,7 @@ import {
   ChevronUp, Zap, Target, Building2, Mail, User,
   Star, RefreshCw, Download, Filter
 } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, BrowserRouter } from "react-router-dom";
 
 const LAB_SCOPES = [
   { id:"iso10993", label:"ISO 10993-18", full:"ISO 10993-18 — Biocompatibilidade", cnae_label:"CNAE 3250-7/01 · Fab. equip. médico-odontológicos", color:"purple", icon:"🦴",
