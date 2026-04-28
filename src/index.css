@@ -1,39 +1,66 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    --background: 0 0% 98%;
+    --foreground: 224 20% 12%;
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --primary: 221.2 83.2% 53.3%;
-    --primary-foreground: 210 40% 98%;
-    --ring: 221.2 83.2% 53.3%;
-    --destructive: 0 84.2% 60.2%;
-    --radius: 0.5rem;
+    --card-foreground: 224 20% 12%;
+    --muted: 220 14% 94%;
+    --muted-foreground: 220 10% 46%;
+    --border: 220 13% 88%;
+    --input: 220 13% 88%;
+    --primary: 221 83% 53%;
+    --primary-foreground: 0 0% 100%;
+    --ring: 221 83% 53%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --success: 142 72% 29%;
+    --warning: 38 92% 50%;
+    --radius: 0.625rem;
+    /* Sidebar */
+    --sidebar: 224 30% 10%;
+    --sidebar-foreground: 220 15% 85%;
+    --sidebar-muted: 224 20% 20%;
+    --sidebar-border: 224 20% 16%;
+    --sidebar-active: 221 83% 53%;
   }
   .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --primary: 217.2 91.2% 59.8%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-    --ring: 224.3 76.3% 48%;
-    --destructive: 0 62.8% 30.6%;
+    --background: 224 25% 7%;
+    --foreground: 220 15% 92%;
+    --card: 224 22% 10%;
+    --card-foreground: 220 15% 92%;
+    --muted: 224 18% 16%;
+    --muted-foreground: 220 10% 54%;
+    --border: 224 18% 18%;
+    --input: 224 18% 18%;
+    --primary: 217 91% 60%;
+    --primary-foreground: 0 0% 100%;
+    --ring: 217 91% 60%;
+    --destructive: 0 63% 40%;
+    --sidebar: 224 30% 6%;
+    --sidebar-foreground: 220 15% 80%;
+    --sidebar-muted: 224 20% 14%;
+    --sidebar-border: 224 20% 12%;
   }
 }
 
 @layer base {
-  * { @apply border-border; }
-  body { @apply bg-background text-foreground; }
+  * { @apply border-border box-border; }
+  html { -webkit-font-smoothing: antialiased; }
+  body { @apply bg-background text-foreground font-sans; }
 }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { @apply bg-transparent; }
+::-webkit-scrollbar-thumb { @apply bg-border rounded-full; }
+::-webkit-scrollbar-thumb:hover { @apply bg-muted-foreground/40; }
+
+/* Animations */
+@keyframes fade-in { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
+.animate-fade-in { animation: fade-in .25s ease both; }
+@keyframes spin-slow { to { transform: rotate(360deg); } }
+.animate-spin-slow { animation: spin-slow 2s linear infinite; }
