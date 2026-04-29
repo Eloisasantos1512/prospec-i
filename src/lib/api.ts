@@ -38,7 +38,7 @@ function isCompany(title: string, url: string): boolean {
   const u = url.toLowerCase();
   if (BLOCKED.some(b => u.includes(b))) return false;
   if (CONTENT_START.some(s => t.startsWith(s))) return false;
-  if (t.includes(" pdf") || t.endsWith(".pdf")) return false;
+  if (t.includes(" pdf") || t.endsWith(".pdf") || titulo.includes("[PDF]") || titulo.includes("[pdf]")) return false;
   return COMPANY_WORDS.some(w => t.includes(w) || u.includes(w));
 }
 
