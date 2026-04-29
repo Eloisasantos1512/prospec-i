@@ -2,77 +2,48 @@ import { useState } from "react";
 import { useUnit } from "@/contexts/UnitContext";
 import {
   getKey, serperSearchWithFallback, enrichLeadPipeline,
-  SerperResult, SearchLog,
+  SerperResult, SearchLog, LeadType,
 } from "@/lib/api";
 import { Link } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import {
   Search, Loader2, AlertCircle, ExternalLink,
-  ChevronDown, ChevronUp, Zap, Target, User, Mail,
-  Star, RefreshCw, Download, Filter, X,
-  CheckCircle, XCircle, Building2, Briefcase, ArrowRight,
+  ChevronDown, ChevronUp, Zap, Target, User, Star,
+  RefreshCw, Download, Filter, X, CheckCircle, XCircle,
+  Building2, Briefcase, ArrowRight, ShieldCheck, Factory,
 } from "lucide-react";
 
-// ── Escopos Lab ──────────────────────────────────────────────────────
 const LAB_SCOPES = [
-  {
-    id:"iso10993", icon:"🦴", label:"ISO 10993-18", sub:"Biocompatibilidade",
-    cnae:"3250-7/01", color:"violet" as const,
+  { id:"iso10993",   icon:"🦴", label:"ISO 10993-18", sub:"Biocompatibilidade",  cnae:"3250-7/01",   color:"violet" as const,
     motivo:"Fabricante de dispositivo implantável — necessita ensaios de biocompatibilidade ISO 10993",
-    seeds:["implante ortopédico biomédica","dispositivo médico implantável titânio","prótese cirúrgica biomaterial","instrumental cirúrgico estéril"],
-  },
-  {
-    id:"mri", icon:"🧲", label:"MRI", sub:"Ressonância Magnética",
-    cnae:"26.60-4/00", color:"blue" as const,
+    seeds:["implante ortopédico biomédica","dispositivo médico implantável titânio","prótese cirúrgica biomaterial","instrumental cirúrgico estéril"] },
+  { id:"mri",        icon:"🧲", label:"MRI",           sub:"Ressonância Magnética", cnae:"26.60-4/00", color:"blue" as const,
     motivo:"Fabricante de implante — necessita avaliação de compatibilidade MRI",
-    seeds:["equipamento imagem médica diagnóstico","implante compatível ressonância magnética","monitor cardíaco desfibrilador"],
-  },
-  {
-    id:"endotoxina", icon:"🧬", label:"Endotoxina", sub:"8129-0/00",
-    cnae:"8129-0/00", color:"teal" as const,
+    seeds:["equipamento imagem médica diagnóstico","implante compatível ressonância magnética","monitor cardíaco desfibrilador"] },
+  { id:"endotoxina", icon:"🧬", label:"Endotoxina",    sub:"8129-0/00",           cnae:"8129-0/00",   color:"teal" as const,
     motivo:"Fabricante de produto injetável/estéril — necessita testes de endotoxina bacteriana",
-    seeds:["farmácia manipulação injetáveis parenterais","indústria farmacêutica produto injetável","fabricante produto estéril hospitalar"],
-  },
-  {
-    id:"esterilidade", icon:"⚗️", label:"Esterilidade", sub:"3250-7/01",
-    cnae:"3250-7/01", color:"green" as const,
+    seeds:["farmácia manipulação injetáveis parenterais","indústria farmacêutica produto injetável","fabricante produto estéril hospitalar"] },
+  { id:"esterilidade",icon:"⚗️",label:"Esterilidade",  sub:"3250-7/01",           cnae:"3250-7/01",   color:"green" as const,
     motivo:"Fabricante de material médico-hospitalar — necessita validação de esterilidade e bioburden",
-    seeds:["embalagem produto farmacêutico estéril","material médico descartável hospitalar","seringa agulha cateter sutura"],
-  },
+    seeds:["embalagem produto farmacêutico estéril","material médico descartável hospitalar","seringa agulha cateter sutura"] },
 ];
 
-// ── Escopos OCP ──────────────────────────────────────────────────────
 const OCP_SCOPES = [
-  {
-    id:"p145", icon:"🚗", label:"Portaria 145", sub:"2022 — Automotivos",
-    cnae:"2910-7/02", color:"blue" as const,
+  { id:"p145",      icon:"🚗", label:"Portaria 145", sub:"2022 — Automotivos",  cnae:"2910-7/02", color:"blue" as const,
     motivo:"Fabricante/importador de autopeças — necessita certificação INMETRO Portaria 145/2022",
-    seeds:["autopeças fabricante homologação","componentes automotivos certificação","peças veiculares fabricante"],
-  },
-  {
-    id:"p384", icon:"🏥", label:"Portaria 384", sub:"2020 — Eletromédicos",
-    cnae:"26.60-4/00", color:"violet" as const,
+    seeds:["autopeças fabricante homologação","componentes automotivos certificação","peças veiculares fabricante"] },
+  { id:"p384",      icon:"🏥", label:"Portaria 384", sub:"2020 — Eletromédicos", cnae:"26.60-4/00", color:"violet" as const,
     motivo:"Fabricante de equipamento eletromédico — necessita certificação INMETRO Portaria 384/2020",
-    seeds:["equipamento eletromédico hospitalar fabricante","monitor desfibrilador fabricante","equipamento médico diagnóstico"],
-  },
-  {
-    id:"anatel715", icon:"📡", label:"Anatel 715", sub:"2019 — Telecom",
-    cnae:"2631-1/00", color:"indigo" as const,
+    seeds:["equipamento eletromédico hospitalar fabricante","monitor desfibrilador fabricante","equipamento médico diagnóstico"] },
+  { id:"anatel715", icon:"📡", label:"Anatel 715",   sub:"2019 — Telecom",       cnae:"2631-1/00", color:"indigo" as const,
     motivo:"Fabricante de equipamento de telecomunicação — necessita homologação Anatel 715/2019",
-    seeds:["equipamento telecomunicação fabricante","rádio transmissor antena fabricante","equipamento wireless IoT fabricante"],
-  },
-  {
-    id:"p071", icon:"⚡", label:"Portaria 071", sub:"2022 — Eficiência",
-    cnae:"2710-4/02", color:"amber" as const,
+    seeds:["equipamento telecomunicação fabricante","rádio transmissor antena fabricante","equipamento wireless IoT fabricante"] },
+  { id:"p071",      icon:"⚡", label:"Portaria 071", sub:"2022 — Eficiência",    cnae:"2710-4/02", color:"amber" as const,
     motivo:"Fabricante de eletrodoméstico — necessita etiquetagem eficiência energética INMETRO",
-    seeds:["eletrodoméstico ar condicionado fabricante","equipamento elétrico eficiência energética","geladeira fogão máquina lavar fabricante"],
-  },
-  {
-    id:"p501", icon:"🔌", label:"Portaria 501", sub:"2021 — Elétricos",
-    cnae:"2710-4/03", color:"green" as const,
+    seeds:["eletrodoméstico ar condicionado fabricante","equipamento elétrico eficiência energética","geladeira fogão máquina lavar fabricante"] },
+  { id:"p501",      icon:"🔌", label:"Portaria 501", sub:"2021 — Elétricos",     cnae:"2710-4/03", color:"green" as const,
     motivo:"Fabricante de produto eletroeletrônico — necessita certificação INMETRO Portaria 501",
-    seeds:["cabo fio elétrico fabricante","produto eletroeletrônico fabricante","tomada plugue extensão fabricante"],
-  },
+    seeds:["cabo fio elétrico fabricante","produto eletroeletrônico fabricante","tomada plugue extensão fabricante"] },
 ];
 
 type Color = "violet"|"blue"|"teal"|"green"|"indigo"|"amber";
@@ -85,51 +56,70 @@ const PAL: Record<Color,{bg:string;bd:string;tx:string;dot:string;tag:string}> =
   amber: { bg:"bg-amber-50 dark:bg-amber-950/30",   bd:"border-amber-300 dark:border-amber-700",   tx:"text-amber-700 dark:text-amber-300",   dot:"bg-amber-500",  tag:"bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300" },
 };
 
+// ── Tag de tipo de lead ──────────────────────────────────────────────
+const LEAD_TYPE_STYLE: Record<LeadType, string> = {
+  "Fabricante Verificado":    "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300 border-green-300 dark:border-green-700",
+  "Indústria Nacional":       "bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300 border-blue-300 dark:border-blue-700",
+  "Importador Verificado":    "bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300 border-purple-300 dark:border-purple-700",
+  "Distribuidor B2B":         "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 border-amber-300 dark:border-amber-700",
+  "Empresa Não Classificada": "bg-muted text-muted-foreground border-border",
+};
+
+const LEAD_TYPE_ICON: Record<LeadType, typeof Factory> = {
+  "Fabricante Verificado":    Factory,
+  "Indústria Nacional":       Building2,
+  "Importador Verificado":    ShieldCheck,
+  "Distribuidor B2B":         Building2,
+  "Empresa Não Classificada": Building2,
+};
+
 const ESTADOS = ["SP","MG","SC","RS","PR","RJ","GO","CE","PE","DF","BA","AM","PA","MT","MS"];
 
 interface Lead extends SerperResult {
-  estado?:     string;
-  norma?:      string;
-  motivo?:     string;
-  icp_score?:  number;
-  email?:      string | null;
-  decisor?:    string | null;
-  cargo?:      string | null;
-  linkedin?:   string | null;
-  deliverable?:boolean | null;
-  enriching?:  boolean;
-  enriched?:   boolean;
+  estado?:          string;
+  norma?:           string;
+  motivo?:          string;
+  icp_score?:       number;
+  email?:           string | null;
+  decisor?:         string | null;
+  cargo?:           string | null;
+  linkedin_pessoa?: string | null;
+  linkedin_empresa?:string | null;
+  empresa_apollo?:  string | null;
+  deliverable?:     boolean | null;
+  company_verified?:boolean;
+  enriching?:       boolean;
+  enriched?:        boolean;
 }
 
 function calcIcp(l: Lead): number {
   const t = (l.titulo + " " + l.snippet).toLowerCase();
   const kws = ["implant","ortopéd","biomédic","prótese","cirúrg","farmácia","parenter","esteril","médic","equip","fabricante","indústria"];
-  let s = kws.filter(k => t.includes(k)).length * 7;
-  if (l.email) s += 15; if (l.decisor) s += 20; if (l.deliverable) s += 10;
+  let s = kws.filter(k => t.includes(k)).length * 6;
+  if (l.lead_type === "Fabricante Verificado") s += 15;
+  if (l.company_verified) s += 10;
+  if (l.email) s += 12; if (l.decisor) s += 18; if (l.deliverable) s += 8;
   return Math.min(s, 100);
 }
 
-// ── Skeleton loader ──────────────────────────────────────────────────
+// ── Skeleton ─────────────────────────────────────────────────────────
 function SkeletonCard() {
   return (
     <div className="bg-card border border-border rounded-2xl overflow-hidden animate-pulse">
-      <div className="px-5 py-3 border-b border-border bg-primary/5 flex items-center gap-3">
-        <div className="h-9 w-9 rounded-full bg-muted" />
-        <div className="flex-1 space-y-2">
-          <div className="h-3 bg-muted rounded w-1/3" />
-          <div className="h-2 bg-muted rounded w-1/4" />
+      <div className="px-5 py-3 border-b border-border bg-muted/30 flex items-center gap-3">
+        <div className="h-9 w-9 rounded-full bg-muted shrink-0" />
+        <div className="flex-1 space-y-1.5">
+          <div className="h-3 bg-muted rounded w-1/3" /><div className="h-2 bg-muted rounded w-1/4" />
         </div>
+        <div className="h-5 w-24 bg-muted rounded-full" />
       </div>
-      <div className="px-5 py-4 flex items-start gap-4">
+      <div className="px-5 py-4 flex gap-4">
         <div className="h-10 w-10 rounded-xl bg-muted shrink-0" />
         <div className="flex-1 space-y-2">
           <div className="h-3 bg-muted rounded w-2/3" />
           <div className="h-2 bg-muted rounded w-full" />
           <div className="h-2 bg-muted rounded w-4/5" />
-          <div className="flex gap-2 mt-2">
-            <div className="h-5 w-20 bg-muted rounded-full" />
-            <div className="h-5 w-12 bg-muted rounded-full" />
-          </div>
+          <div className="flex gap-2 mt-2"><div className="h-5 w-24 bg-muted rounded-full" /><div className="h-5 w-12 bg-muted rounded-full" /></div>
         </div>
       </div>
     </div>
@@ -139,19 +129,14 @@ function SkeletonCard() {
 // ── Log Toast ────────────────────────────────────────────────────────
 function LogToast({ logs }: { logs: SearchLog[] }) {
   if (!logs.length) return null;
-  const last = logs[logs.length - 1];
-  const colors = { ok: "text-green-600", warn: "text-amber-600", error: "text-red-600" };
+  const colors = { ok:"text-green-400", warn:"text-amber-400", error:"text-red-400" };
   return (
-    <div className="fixed bottom-6 right-6 z-50 max-w-sm w-full space-y-1.5">
-      {logs.slice(-4).map((log, i) => (
-        <div key={i} className="flex items-start gap-2 px-3 py-2 rounded-xl bg-foreground/90 dark:bg-card border border-border shadow-lg text-xs">
-          <span className="font-bold text-background dark:text-foreground shrink-0">[{log.step}]</span>
-          <span className={cn("flex-1", colors[log.status], "dark:opacity-90")}>{log.detail}</span>
-          {log.count !== undefined && (
-            <span className="shrink-0 font-mono font-bold text-background dark:text-foreground">
-              {log.count}
-            </span>
-          )}
+    <div className="fixed bottom-6 right-6 z-50 w-80 space-y-1">
+      {logs.slice(-5).map((log, i) => (
+        <div key={i} className="flex items-start gap-2 px-3 py-2 rounded-xl bg-gray-900 dark:bg-gray-800 border border-gray-700 shadow-xl text-xs backdrop-blur-sm">
+          <span className="font-bold text-gray-300 shrink-0 font-mono">[{log.step}]</span>
+          <span className={cn("flex-1 leading-relaxed", colors[log.status])}>{log.detail}</span>
+          {log.count !== undefined && <span className="shrink-0 font-mono font-bold text-white">{log.count}</span>}
         </div>
       ))}
     </div>
@@ -164,39 +149,31 @@ function IcpBadge({ score }: { score: number }) {
   return <span className="text-[11px] text-muted-foreground px-2 py-0.5 rounded-full border border-border">Baixo {score}</span>;
 }
 
-function EmailStatus({ deliverable }: { deliverable?: boolean | null }) {
-  if (deliverable === true)  return <CheckCircle className="h-3.5 w-3.5 text-green-500 shrink-0" />;
-  if (deliverable === false) return <XCircle className="h-3.5 w-3.5 text-red-400 shrink-0" />;
-  return null;
-}
-
 export default function Prospeccao() {
   const { unit } = useUnit();
-  const scopes = unit === "lab" ? LAB_SCOPES : OCP_SCOPES;
-  const [scopeId, setScopeId]   = useState(scopes[0].id);
-  const [estados, setEstados]   = useState<string[]>(["SP"]);
-  const [termo, setTermo]       = useState("");
-  const [leads, setLeads]       = useState<Lead[]>([]);
-  const [loading, setLoading]   = useState(false);
-  const [skeletons, setSkeletons] = useState(0);
-  const [logs, setLogs]         = useState<SearchLog[]>([]);
-  const [erro, setErro]         = useState("");
-  const [exp, setExp]           = useState<number | null>(null);
-  const [onlyICP, setOnlyICP]   = useState(false);
+  const scopes  = unit === "lab" ? LAB_SCOPES : OCP_SCOPES;
+  const [scopeId,  setScopeId]  = useState(scopes[0].id);
+  const [estados,  setEstados]  = useState<string[]>(["SP"]);
+  const [termo,    setTermo]    = useState("");
+  const [leads,    setLeads]    = useState<Lead[]>([]);
+  const [loading,  setLoading]  = useState(false);
+  const [skeletons,setSkeletons]= useState(0);
+  const [logs,     setLogs]     = useState<SearchLog[]>([]);
+  const [erro,     setErro]     = useState("");
+  const [exp,      setExp]      = useState<number | null>(null);
+  const [onlyICP,  setOnlyICP] = useState(false);
 
   const scope = scopes.find(s => s.id === scopeId) || scopes[0];
-  const pal = PAL[scope.color];
+  const pal   = PAL[scope.color];
   const temSerper = !!getKey("SERPER_API_KEY");
 
-  const addLog = (log: SearchLog) => setLogs(p => [...p.slice(-10), log]);
+  const addLog = (l: SearchLog) => setLogs(p => [...p.slice(-12), l]);
   const toggle = (uf: string) => setEstados(p => p.includes(uf) ? p.filter(e => e !== uf) : [...p, uf]);
 
   async function buscar() {
     if (!getKey("SERPER_API_KEY")) { setErro("Configure a SERPER_API_KEY em Configurações."); return; }
     if (!estados.length) { setErro("Selecione ao menos um estado."); return; }
-
-    setLoading(true); setErro(""); setLeads([]); setLogs([]);
-    setSkeletons(3);
+    setLoading(true); setErro(""); setLeads([]); setLogs([]); setSkeletons(3);
 
     const seeds = termo.trim() ? [termo.trim()] : scope.seeds;
     const all: Lead[] = [];
@@ -219,35 +196,33 @@ export default function Prospeccao() {
           } catch (e: unknown) {
             const msg = e instanceof Error ? e.message : String(e);
             addLog({ step: "Serper", status: "error", detail: msg });
-            if (msg.includes("inválida")) { setErro(msg); setLoading(false); setSkeletons(0); return; }
+            if (msg.includes("inválida")) { setErro(msg); break; }
           }
           await new Promise(r => setTimeout(r, 350));
         }
       }
-
       all.sort((a, b) => (b.icp_score || 0) - (a.icp_score || 0));
       setLeads(all);
       setSkeletons(0);
-
-      if (!all.length) {
-        addLog({ step: "Resultado", status: "warn", detail: "Nenhuma empresa encontrada após 3 tentativas por seed/estado" });
-        setErro(`Nenhuma empresa encontrada. Sugestões: adicione mais estados, use busca personalizada ou verifique sua chave Serper.`);
-      } else {
-        addLog({ step: "Resultado", status: "ok", detail: `${all.length} empresas-alvo prontas para enriquecimento`, count: all.length });
-      }
+      addLog({ step: "Resultado", status: all.length > 0 ? "ok" : "warn",
+        detail: all.length > 0
+          ? `${all.length} empresas-alvo · ${all.filter(l => l.lead_type === "Fabricante Verificado").length} fabricantes verificados`
+          : "Nenhuma empresa encontrada após todas as tentativas",
+        count: all.length });
+      if (!all.length) setErro("Nenhuma empresa encontrada. Tente ajustar o escopo, estado ou busca personalizada.");
     } catch (e: unknown) {
       setErro(e instanceof Error ? e.message : "Erro inesperado");
       setSkeletons(0);
     } finally {
       setLoading(false);
-      setTimeout(() => setLogs([]), 8000);
+      setTimeout(() => setLogs([]), 10000);
     }
   }
 
   async function enriquecer(idx: number) {
     const l = leads[idx];
     setLeads(p => p.map((x, i) => i === idx ? { ...x, enriching: true } : x));
-    addLog({ step: "Pipeline", status: "ok", detail: `Iniciando Step 02+03 para "${l.titulo.slice(0, 35)}"` });
+    addLog({ step: "Pipeline", status: "ok", detail: `Iniciando Apollo + Hunter para "${l.titulo.slice(0, 35)}"` });
     try {
       const data = await enrichLeadPipeline(l.titulo, l.site, l.dominio, addLog);
       const updated: Lead = { ...l, ...data, enriching: false, enriched: true };
@@ -268,23 +243,25 @@ export default function Prospeccao() {
 
   function exportCSV() {
     const rows = [
-      ["Decisor","Cargo","Email","Email Verificado","Empresa","Site","LinkedIn","Motivo Lead","Norma","Estado","Score ICP"],
+      ["Tipo Lead","Decisor","Cargo","Email","Verificado","Empresa","Empresa Apollo","LinkedIn Empresa","LinkedIn Pessoa","Site","Motivo","Norma","Estado","Score ICP"],
       ...leads.map(l => [
-        l.decisor||"", l.cargo||"", l.email||"",
-        l.deliverable === true ? "Sim" : l.deliverable === false ? "Não" : "Pendente",
-        l.titulo, l.site||"", l.linkedin||"", l.motivo||"",
+        l.lead_type||"", l.decisor||"", l.cargo||"", l.email||"",
+        l.deliverable===true?"Sim":l.deliverable===false?"Não":"Pendente",
+        l.titulo, l.empresa_apollo||"", l.linkedin_empresa||"",
+        l.linkedin_pessoa||"", l.site||"", l.motivo||"",
         l.norma||"", l.estado||"", String(l.icp_score||0),
       ]),
     ];
     const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g,'""')}"`).join(",")).join("\n");
     const a = document.createElement("a");
-    a.href = URL.createObjectURL(new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8" }));
-    a.download = `leads_${scope.id}.csv`; a.click();
+    a.href = URL.createObjectURL(new Blob(["\uFEFF"+csv],{type:"text/csv;charset=utf-8"}));
+    a.download = `leads_verificados_${scope.id}.csv`; a.click();
   }
 
-  const visible = onlyICP ? leads.filter(l => (l.icp_score || 0) >= 45) : leads;
-  const comDecisor = leads.filter(l => l.decisor).length;
-  const comEmailVerif = leads.filter(l => l.deliverable === true).length;
+  const visible = onlyICP ? leads.filter(l => (l.icp_score||0) >= 45) : leads;
+  const fabricantes = leads.filter(l => l.lead_type === "Fabricante Verificado").length;
+  const comDecisor  = leads.filter(l => l.decisor).length;
+  const verificados = leads.filter(l => l.deliverable === true).length;
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -293,8 +270,8 @@ export default function Prospeccao() {
       {/* Header */}
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Prospecção {unit === "lab" ? "Laboratório" : "OCP"}</h1>
-          <p className="text-sm text-muted-foreground mt-1">Pipeline B2B: Serper → Apollo → Hunter · Decisores técnicos</p>
+          <h1 className="text-2xl font-bold tracking-tight">Prospecção {unit==="lab"?"Laboratório":"OCP"}</h1>
+          <p className="text-sm text-muted-foreground mt-1">Serper (intitle) → Validação Domínio → Apollo Company → Hunter · Apenas Fabricantes</p>
         </div>
         {leads.length > 0 && (
           <div className="flex gap-2 flex-wrap">
@@ -308,7 +285,6 @@ export default function Prospeccao() {
         )}
       </div>
 
-      {/* Aviso sem Serper */}
       {!temSerper && (
         <div className="flex items-start gap-4 p-4 rounded-2xl border border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-800/60">
           <AlertCircle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
@@ -320,87 +296,72 @@ export default function Prospeccao() {
         </div>
       )}
 
-      {/* Painel de busca */}
+      {/* Painel */}
       <div className="bg-card border border-border rounded-2xl overflow-hidden shadow-sm">
-
-        {/* Escopos */}
         <div className="p-5 border-b border-border">
           <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground mb-3">
-            {unit === "lab" ? "Ensaio / Norma" : "Portaria / Norma"}
+            {unit==="lab"?"Ensaio / Norma":"Portaria / Norma"}
           </p>
           <div className="flex flex-wrap gap-2">
             {scopes.map(s => {
-              const p = PAL[s.color]; const active = scopeId === s.id;
+              const p = PAL[s.color]; const active = scopeId===s.id;
               return (
-                <button key={s.id} onClick={() => { setScopeId(s.id); setLeads([]); setTermo(""); }}
+                <button key={s.id} onClick={()=>{setScopeId(s.id);setLeads([]);setTermo("");}}
                   className={cn("flex items-center gap-2 px-3.5 py-2 rounded-xl border text-sm font-medium transition-all",
-                    active ? `${p.bg} ${p.bd} ${p.tx}` : "border-border text-muted-foreground hover:bg-muted")}>
+                    active?`${p.bg} ${p.bd} ${p.tx}`:"border-border text-muted-foreground hover:bg-muted")}>
                   <span>{s.icon}</span>
-                  <div>
-                    <span className="block text-[13px] font-semibold">{s.label}</span>
-                    <span className="block text-[10px] opacity-70">{s.sub}</span>
-                  </div>
-                  {active && <div className={cn("h-1.5 w-1.5 rounded-full ml-1", pal.dot)} />}
+                  <div><span className="block text-[13px] font-semibold">{s.label}</span><span className="block text-[10px] opacity-70">{s.sub}</span></div>
+                  {active&&<div className={cn("h-1.5 w-1.5 rounded-full ml-1",pal.dot)}/>}
                 </button>
               );
             })}
           </div>
-          <div className={cn("mt-3 flex items-start gap-2 px-3 py-2 rounded-xl border text-xs", pal.bg, pal.bd, pal.tx)}>
-            <ArrowRight className="h-3.5 w-3.5 shrink-0 mt-0.5" />
-            <span><strong>Motivo:</strong> {scope.motivo}</span>
+          <div className={cn("mt-3 flex items-start gap-2 px-3 py-2 rounded-xl border text-xs",pal.bg,pal.bd,pal.tx)}>
+            <ArrowRight className="h-3.5 w-3.5 shrink-0 mt-0.5"/><span><strong>Motivo:</strong> {scope.motivo}</span>
           </div>
         </div>
 
         <div className="p-5 space-y-4">
-          {/* Termo */}
           <div>
-            <label className="text-xs font-semibold text-muted-foreground mb-1.5 block">
-              Busca personalizada <span className="font-normal opacity-60">(opcional)</span>
-            </label>
+            <label className="text-xs font-semibold text-muted-foreground mb-1.5 block">Busca personalizada <span className="font-normal opacity-60">(opcional)</span></label>
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <input type="text" value={termo}
-                onChange={e => setTermo(e.target.value)}
-                onKeyDown={e => e.key === "Enter" && buscar()}
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground"/>
+              <input type="text" value={termo} onChange={e=>setTermo(e.target.value)} onKeyDown={e=>e.key==="Enter"&&buscar()}
                 placeholder={`Ex: ${scope.seeds[0]}`}
-                className="w-full h-10 pl-9 pr-9 rounded-xl border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring placeholder:text-muted-foreground/50"
-              />
-              {termo && <button onClick={() => setTermo("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"><X className="h-3.5 w-3.5" /></button>}
+                className="w-full h-10 pl-9 pr-9 rounded-xl border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring placeholder:text-muted-foreground/50"/>
+              {termo&&<button onClick={()=>setTermo("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"><X className="h-3.5 w-3.5"/></button>}
             </div>
           </div>
 
-          {/* Estados */}
           <div>
             <label className="text-xs font-semibold text-muted-foreground mb-2 block">Estados alvo</label>
             <div className="flex flex-wrap gap-1.5">
-              {ESTADOS.map(uf => (
-                <button key={uf} onClick={() => toggle(uf)}
+              {ESTADOS.map(uf=>(
+                <button key={uf} onClick={()=>toggle(uf)}
                   className={cn("px-2.5 py-1 rounded-lg text-xs font-semibold border transition-all",
-                    estados.includes(uf) ? `${pal.bg} ${pal.bd} ${pal.tx}` : "border-border text-muted-foreground hover:bg-muted")}>
+                    estados.includes(uf)?`${pal.bg} ${pal.bd} ${pal.tx}`:"border-border text-muted-foreground hover:bg-muted")}>
                   {uf}
                 </button>
               ))}
-              <button onClick={() => setEstados(ESTADOS)} className="px-2.5 py-1 rounded-lg text-xs border border-dashed border-border text-muted-foreground hover:bg-muted">Todos</button>
-              <button onClick={() => setEstados([])} className="px-2.5 py-1 rounded-lg text-xs border border-dashed border-border text-muted-foreground hover:bg-muted">Limpar</button>
+              <button onClick={()=>setEstados(ESTADOS)} className="px-2.5 py-1 rounded-lg text-xs border border-dashed border-border text-muted-foreground hover:bg-muted">Todos</button>
+              <button onClick={()=>setEstados([])} className="px-2.5 py-1 rounded-lg text-xs border border-dashed border-border text-muted-foreground hover:bg-muted">Limpar</button>
             </div>
           </div>
 
           {/* Status APIs */}
           <div className="grid grid-cols-3 gap-2 text-xs">
             {[
-              { n:"01", label:"Serper", desc:"Identifica fabricantes", icon:"🔍", key:"SERPER_API_KEY" },
-              { n:"02", label:"Apollo", desc:"Busca decisores", icon:"👤", key:"APOLLO_API_KEY" },
-              { n:"03", label:"Hunter", desc:"Valida e-mails", icon:"✉️", key:"HUNTER_API_KEY" },
-            ].map(s => {
-              const ok = !!getKey(s.key);
-              return (
+              {n:"01",label:"Serper",desc:"intitle:fabricante",icon:"🔍",key:"SERPER_API_KEY"},
+              {n:"02",label:"Apollo",desc:"Company + Decisor", icon:"👤",key:"APOLLO_API_KEY"},
+              {n:"03",label:"Hunter",desc:"Valida e-mails",    icon:"✉️",key:"HUNTER_API_KEY"},
+            ].map(s=>{
+              const ok=!!getKey(s.key);
+              return(
                 <div key={s.n} className={cn("flex items-center gap-2 p-2.5 rounded-xl border",
-                  ok ? "bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800/60" : "bg-muted border-border")}>
-                  <span className="text-base">{s.icon}</span>
+                  ok?"bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800":"bg-muted border-border")}>
+                  <span>{s.icon}</span>
                   <div>
-                    <p className={cn("font-semibold text-[11px]", ok ? "text-green-700 dark:text-green-400" : "text-muted-foreground")}>
-                      {s.n} · {s.label} {ok ? "✓" : "—"}
-                    </p>
+                    <p className={cn("font-semibold text-[11px]",ok?"text-green-700 dark:text-green-400":"text-muted-foreground")}>{s.n}·{s.label} {ok?"✓":"—"}</p>
                     <p className="text-[10px] text-muted-foreground">{s.desc}</p>
                   </div>
                 </div>
@@ -408,49 +369,43 @@ export default function Prospeccao() {
             })}
           </div>
 
-          {/* Seeds */}
-          {!termo && (
-            <div className={cn("rounded-xl p-3 border", pal.bg, pal.bd)}>
-              <p className={cn("text-[11px] font-semibold mb-2", pal.tx)}>
-                Seeds com fallback automático ({scope.seeds.length} variações)
-              </p>
-              {scope.seeds.map((s, i) => (
+          {!termo&&(
+            <div className={cn("rounded-xl p-3 border",pal.bg,pal.bd)}>
+              <p className={cn("text-[11px] font-semibold mb-2",pal.tx)}>Seeds com intitle + fallback ({scope.seeds.length})</p>
+              {scope.seeds.map((s,i)=>(
                 <div key={i} className="flex items-start gap-2 text-xs text-muted-foreground mb-1">
-                  <div className={cn("h-1 w-1 rounded-full mt-1.5 shrink-0", pal.dot)} />{s}
+                  <div className={cn("h-1 w-1 rounded-full mt-1.5 shrink-0",pal.dot)}/>{s}
                 </div>
               ))}
             </div>
           )}
 
-          {/* Botão */}
           <div className="flex items-center gap-3 pt-1">
             <button onClick={buscar} disabled={loading}
               className="flex items-center gap-2 px-6 h-10 rounded-xl bg-primary text-primary-foreground text-sm font-bold hover:bg-primary/90 disabled:opacity-50 shadow-sm active:scale-95 transition-all">
-              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
-              {loading ? "Identificando fabricantes..." : "Buscar Leads"}
+              {loading?<Loader2 className="h-4 w-4 animate-spin"/>:<Search className="h-4 w-4"/>}
+              {loading?"Buscando fabricantes...":"Buscar Leads"}
             </button>
-            {leads.length > 0 && (
-              <button onClick={() => { setLeads([]); setExp(null); setLogs([]); }}
+            {leads.length>0&&(
+              <button onClick={()=>{setLeads([]);setExp(null);setLogs([]);}}
                 className="flex items-center gap-1.5 px-4 h-10 rounded-xl border border-border text-sm text-muted-foreground hover:bg-muted">
-                <RefreshCw className="h-3.5 w-3.5" />Nova busca
+                <RefreshCw className="h-3.5 w-3.5"/>Nova busca
               </button>
             )}
           </div>
         </div>
       </div>
 
-      {/* Erro */}
-      {erro && !loading && (
+      {/* Erro com log */}
+      {erro&&!loading&&(
         <div className="p-4 rounded-xl bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 space-y-2">
-          <div className="flex items-center gap-2 text-red-800 dark:text-red-300 text-sm">
-            <AlertCircle className="h-4 w-4 shrink-0" />{erro}
-          </div>
-          {logs.length > 0 && (
-            <div className="mt-2 space-y-1">
+          <div className="flex items-center gap-2 text-red-800 dark:text-red-300 text-sm"><AlertCircle className="h-4 w-4 shrink-0"/>{erro}</div>
+          {logs.length>0&&(
+            <div className="mt-2 space-y-1 border-t border-red-200 dark:border-red-700 pt-2">
               <p className="text-[11px] text-red-700 dark:text-red-400 font-semibold">Log do pipeline:</p>
-              {logs.map((l, i) => (
+              {logs.map((l,i)=>(
                 <p key={i} className="text-[11px] text-red-600 dark:text-red-400 font-mono">
-                  [{l.step}] {l.detail}{l.count !== undefined ? ` (${l.count})` : ""}
+                  [{l.step}] {l.detail}{l.count!==undefined?` → ${l.count}`:""}
                 </p>
               ))}
             </div>
@@ -458,122 +413,140 @@ export default function Prospeccao() {
         </div>
       )}
 
-      {/* Skeletons enquanto carrega */}
-      {loading && skeletons > 0 && (
+      {/* Skeletons */}
+      {loading&&skeletons>0&&(
         <div className="space-y-4">
-          <p className="text-sm text-muted-foreground flex items-center gap-2">
-            <Loader2 className="h-4 w-4 animate-spin" />
-            Identificando fabricantes · Buscando decisores · Validando e-mails...
-          </p>
-          {Array.from({ length: skeletons }).map((_, i) => <SkeletonCard key={i} />)}
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Loader2 className="h-4 w-4 animate-spin"/>
+            <span>Filtrando fabricantes com <code className="text-xs bg-muted px-1 rounded">intitle:fabricante</code> · Validando domínios · Buscando decisores...</span>
+          </div>
+          {Array.from({length:skeletons}).map((_,i)=><SkeletonCard key={i}/>)}
         </div>
       )}
 
       {/* Resultados */}
-      {leads.length > 0 && (
+      {leads.length>0&&(
         <div className="space-y-4">
           <div className="flex items-center justify-between flex-wrap gap-3">
             <div className="flex items-center gap-3 flex-wrap">
-              <span className="text-sm font-semibold">{leads.length} empresas-alvo</span>
-              <span className={cn("text-xs font-medium px-2.5 py-1 rounded-full border", pal.bg, pal.bd, pal.tx)}>
-                {scope.icon} {scope.label}
+              <span className="text-sm font-semibold">{leads.length} empresas</span>
+              <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 border border-green-200 dark:border-green-700">
+                <Factory className="h-3 w-3 inline mr-1"/>
+                {fabricantes} fabricantes verificados
               </span>
               <span className="text-xs text-muted-foreground flex items-center gap-1">
-                <User className="h-3 w-3 text-blue-500" />{comDecisor} decisores
+                <User className="h-3 w-3 text-blue-500"/>{comDecisor} decisores
               </span>
               <span className="text-xs text-muted-foreground flex items-center gap-1">
-                <CheckCircle className="h-3 w-3 text-green-500" />{comEmailVerif} verificados
+                <CheckCircle className="h-3 w-3 text-green-500"/>{verificados} e-mails verificados
               </span>
             </div>
-            <button onClick={() => setOnlyICP(!onlyICP)}
+            <button onClick={()=>setOnlyICP(!onlyICP)}
               className={cn("flex items-center gap-1.5 px-3 h-8 rounded-xl border text-xs font-medium transition-all",
-                onlyICP ? `${pal.bg} ${pal.bd} ${pal.tx}` : "border-border text-muted-foreground hover:bg-muted")}>
-              <Filter className="h-3 w-3" />Score ≥ 45
+                onlyICP?`${pal.bg} ${pal.bd} ${pal.tx}`:"border-border text-muted-foreground hover:bg-muted")}>
+              <Filter className="h-3 w-3"/>Score ≥ 45
             </button>
           </div>
 
-          {visible.map((lead, idx) => {
-            const isHot = (lead.icp_score || 0) >= 75;
-            const isMed = (lead.icp_score || 0) >= 45;
-            const temDecisor = !!(lead.decisor || lead.email);
+          {visible.map((lead,idx)=>{
+            const isHot=(lead.icp_score||0)>=75;
+            const isMed=(lead.icp_score||0)>=45;
+            const temDecisor=!!(lead.decisor||lead.email);
+            const TypeIcon = LEAD_TYPE_ICON[lead.lead_type] || Building2;
 
-            return (
+            return(
               <div key={idx} className={cn(
                 "bg-card border rounded-2xl overflow-hidden shadow-sm transition-all hover:shadow-md",
-                isHot ? "border-amber-300 dark:border-amber-700/60" :
-                isMed ? "border-blue-200 dark:border-blue-800/60" : "border-border"
+                isHot?"border-amber-300 dark:border-amber-700/60":isMed?"border-blue-200 dark:border-blue-800/60":"border-border"
               )}>
-                {/* Decisor em destaque (topo do card) */}
-                {temDecisor && (
+                {/* Decisor em destaque */}
+                {temDecisor&&(
                   <div className={cn("px-5 py-3 border-b border-border flex items-center gap-4 flex-wrap",
-                    isHot ? "bg-amber-50/60 dark:bg-amber-950/20" : "bg-primary/5 dark:bg-primary/10")}>
+                    isHot?"bg-amber-50/60 dark:bg-amber-950/20":"bg-primary/5 dark:bg-primary/10")}>
                     <div className="h-9 w-9 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
-                      <User className="h-4 w-4 text-primary" />
+                      <User className="h-4 w-4 text-primary"/>
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
-                        {lead.decisor && <span className="font-bold text-foreground text-sm">{lead.decisor}</span>}
-                        {lead.cargo && (
-                          <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                            <Briefcase className="h-3 w-3" />{lead.cargo}
-                          </span>
-                        )}
+                        {lead.decisor&&<span className="font-bold text-foreground text-sm">{lead.decisor}</span>}
+                        {lead.cargo&&<span className="flex items-center gap-1 text-xs text-muted-foreground"><Briefcase className="h-3 w-3"/>{lead.cargo}</span>}
                       </div>
-                      {lead.email && (
+                      {lead.email&&(
                         <div className="flex items-center gap-1.5 mt-0.5">
-                          <EmailStatus deliverable={lead.deliverable} />
+                          {lead.deliverable===true?<CheckCircle className="h-3.5 w-3.5 text-green-500 shrink-0"/>:lead.deliverable===false?<XCircle className="h-3.5 w-3.5 text-red-400 shrink-0"/>:null}
                           <span className="text-xs text-muted-foreground font-mono">{lead.email}</span>
-                          {lead.deliverable === true && (
-                            <span className="text-[10px] text-green-600 font-semibold bg-green-100 dark:bg-green-900/30 px-1.5 py-0.5 rounded-full">✓ verificado</span>
-                          )}
+                          {lead.deliverable===true&&<span className="text-[10px] text-green-600 font-semibold bg-green-100 dark:bg-green-900/30 px-1.5 py-0.5 rounded-full">✓ verificado</span>}
                         </div>
                       )}
                     </div>
-                    {lead.linkedin && (
-                      <a href={lead.linkedin} target="_blank" rel="noopener noreferrer"
-                        className="text-xs text-blue-600 hover:underline flex items-center gap-1 shrink-0">
-                        <ExternalLink className="h-3 w-3" />LinkedIn
-                      </a>
-                    )}
-                    <IcpBadge score={lead.icp_score || 0} />
+                    <div className="flex items-center gap-2 shrink-0">
+                      {lead.linkedin_pessoa&&(
+                        <a href={lead.linkedin_pessoa} target="_blank" rel="noopener noreferrer"
+                          className="text-xs text-blue-600 hover:underline flex items-center gap-1">
+                          <ExternalLink className="h-3 w-3"/>LinkedIn
+                        </a>
+                      )}
+                      <IcpBadge score={lead.icp_score||0}/>
+                    </div>
                   </div>
                 )}
 
                 {/* Empresa */}
                 <div className="px-5 py-4 flex items-start gap-4">
                   <div className="h-10 w-10 rounded-xl bg-muted flex items-center justify-center shrink-0 border border-border">
-                    <Building2 className="h-5 w-5 text-muted-foreground" />
+                    <TypeIcon className="h-5 w-5 text-muted-foreground"/>
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
-                        <h3 className="font-bold text-foreground text-sm">{lead.titulo}</h3>
+                        <h3 className="font-bold text-foreground text-sm">{lead.empresa_apollo||lead.titulo}</h3>
+                        {lead.empresa_apollo&&lead.empresa_apollo!==lead.titulo&&(
+                          <p className="text-xs text-muted-foreground">{lead.titulo}</p>
+                        )}
                         <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{lead.snippet}</p>
                       </div>
                       <div className="flex items-center gap-2 shrink-0">
-                        {!temDecisor && <IcpBadge score={lead.icp_score || 0} />}
-                        {lead.site && (
-                          <a href={lead.site.startsWith("http") ? lead.site : `https://${lead.site}`}
+                        {!temDecisor&&<IcpBadge score={lead.icp_score||0}/>}
+                        {lead.site&&(
+                          <a href={lead.site.startsWith("http")?lead.site:`https://${lead.site}`}
                             target="_blank" rel="noopener noreferrer"
-                            className="h-7 w-7 rounded-lg border border-border flex items-center justify-center text-muted-foreground hover:text-primary hover:border-primary transition-colors">
-                            <ExternalLink className="h-3.5 w-3.5" />
+                            className="h-7 w-7 rounded-lg border border-border flex items-center justify-center text-muted-foreground hover:text-primary hover:border-primary">
+                            <ExternalLink className="h-3.5 w-3.5"/>
                           </a>
                         )}
                       </div>
                     </div>
 
+                    {/* Tags: Tipo Lead + Norma + Estado */}
                     <div className="flex flex-wrap gap-1.5 mt-2">
-                      <span className={cn("text-[10px] font-semibold px-2 py-0.5 rounded-full border", pal.tag, pal.bd)}>
+                      <span className={cn("inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border",LEAD_TYPE_STYLE[lead.lead_type])}>
+                        <TypeIcon className="h-2.5 w-2.5"/>{lead.lead_type}
+                      </span>
+                      <span className={cn("text-[10px] font-semibold px-2 py-0.5 rounded-full border",pal.tag,pal.bd)}>
                         {scope.icon} {lead.norma}
                       </span>
-                      {lead.estado && <span className="text-[10px] px-2 py-0.5 rounded-full bg-muted text-muted-foreground border border-border">📍 {lead.estado}</span>}
+                      {lead.estado&&<span className="text-[10px] px-2 py-0.5 rounded-full bg-muted text-muted-foreground border border-border">📍 {lead.estado}</span>}
+                      {lead.company_verified&&(
+                        <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 border border-green-200 dark:border-green-700">
+                          <ShieldCheck className="h-2.5 w-2.5"/>Apollo ✓
+                        </span>
+                      )}
                     </div>
 
-                    {lead.motivo && (
-                      <div className={cn("mt-2 flex items-start gap-1.5 text-[11px] rounded-lg px-2.5 py-1.5 border", pal.bg, pal.bd, pal.tx)}>
-                        <ArrowRight className="h-3 w-3 shrink-0 mt-0.5" />
+                    {/* Contexto de venda */}
+                    {lead.motivo&&(
+                      <div className={cn("mt-2 flex items-start gap-1.5 text-[11px] rounded-lg px-2.5 py-1.5 border",pal.bg,pal.bd,pal.tx)}>
+                        <ArrowRight className="h-3 w-3 shrink-0 mt-0.5"/>
                         <span>{lead.motivo}</span>
                       </div>
+                    )}
+
+                    {/* LinkedIn da empresa */}
+                    {lead.linkedin_empresa&&(
+                      <a href={lead.linkedin_empresa} target="_blank" rel="noopener noreferrer"
+                        className="mt-2 inline-flex items-center gap-1.5 text-xs text-blue-600 hover:underline">
+                        <ExternalLink className="h-3 w-3"/>Página da Empresa no LinkedIn
+                      </a>
                     )}
                   </div>
                 </div>
@@ -582,58 +555,61 @@ export default function Prospeccao() {
                 <div className="px-5 py-2.5 border-t border-border bg-muted/30 flex items-center justify-between gap-3">
                   <span className="text-[11px] text-muted-foreground">
                     {lead.enriching
-                      ? <span className="flex items-center gap-1.5"><Loader2 className="h-3 w-3 animate-spin" />Pipeline em andamento...</span>
-                      : lead.enriched
-                      ? <span className="text-green-600 dark:text-green-400 font-semibold">✓ Pipeline concluído</span>
-                      : `${lead.norma} · ${lead.estado}`}
+                      ?<span className="flex items-center gap-1.5"><Loader2 className="h-3 w-3 animate-spin"/>Apollo + Hunter em andamento...</span>
+                      :lead.enriched
+                      ?<span className="text-green-600 dark:text-green-400 font-semibold">✓ Pipeline completo</span>
+                      :`${lead.lead_type} · ${lead.estado}`}
                   </span>
                   <div className="flex items-center gap-2">
-                    {!lead.enriched && (
-                      <button onClick={() => enriquecer(idx)} disabled={lead.enriching}
-                        className="flex items-center gap-1.5 px-3 h-7 rounded-lg bg-primary/10 text-primary text-xs font-semibold hover:bg-primary/20 disabled:opacity-50 border border-primary/20 transition-colors">
-                        {lead.enriching ? <Loader2 className="h-3 w-3 animate-spin" /> : <Zap className="h-3 w-3" />}
-                        {lead.enriching ? "Buscando..." : "Enriquecer"}
+                    {!lead.enriched&&(
+                      <button onClick={()=>enriquecer(idx)} disabled={lead.enriching}
+                        className="flex items-center gap-1.5 px-3 h-7 rounded-lg bg-primary/10 text-primary text-xs font-semibold hover:bg-primary/20 disabled:opacity-50 border border-primary/20">
+                        {lead.enriching?<Loader2 className="h-3 w-3 animate-spin"/>:<Zap className="h-3 w-3"/>}
+                        {lead.enriching?"Buscando...":"→ Decisor"}
                       </button>
                     )}
-                    <button onClick={() => setExp(exp === idx ? null : idx)}
-                      className="flex items-center gap-1 px-2.5 h-7 rounded-lg text-xs text-muted-foreground hover:bg-muted transition-colors">
-                      {exp === idx ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}Detalhes
+                    <button onClick={()=>setExp(exp===idx?null:idx)}
+                      className="flex items-center gap-1 px-2.5 h-7 rounded-lg text-xs text-muted-foreground hover:bg-muted">
+                      {exp===idx?<ChevronUp className="h-3.5 w-3.5"/>:<ChevronDown className="h-3.5 w-3.5"/>}Detalhes
                     </button>
                   </div>
                 </div>
 
-                {/* Detalhes expandidos */}
-                {exp === idx && (
+                {/* Detalhes */}
+                {exp===idx&&(
                   <div className="px-5 py-4 border-t border-border bg-muted/10 animate-fade-in space-y-3">
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                       {([
+                        ["🏷 Tipo Lead", lead.lead_type],
                         ["👤 Decisor", lead.decisor],
                         ["💼 Cargo", lead.cargo],
                         ["✉️ Email", lead.email],
-                        ["✅ Verificado", lead.deliverable === true ? "Sim ✓" : lead.deliverable === false ? "Não ✗" : "Pendente"],
+                        ["✅ Verificado", lead.deliverable===true?"Sim ✓":lead.deliverable===false?"Não ✗":"Pendente"],
                         ["🌐 Site", lead.site],
+                        ["🏢 Empresa Apollo", lead.empresa_apollo],
                         ["📍 Estado", lead.estado],
-                      ] as [string, string | null | undefined][]).map(([lbl, val]) => (
+                        ["🔗 LinkedIn Empresa", lead.linkedin_empresa],
+                      ] as [string,string|null|undefined][]).map(([lbl,val])=>(
                         <div key={lbl} className="bg-card rounded-xl border border-border p-3">
                           <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wide mb-1">{lbl}</p>
-                          <p className="text-xs font-medium break-all">{val || "—"}</p>
+                          <p className="text-xs font-medium break-all">{val||"—"}</p>
                         </div>
                       ))}
                     </div>
                     <div className="bg-card rounded-xl border border-border p-3">
                       <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wide mb-1">Contexto de venda</p>
-                      <p className="text-xs">{lead.motivo || "—"}</p>
+                      <p className="text-xs">{lead.motivo||"—"}</p>
                     </div>
                     <div className="bg-card rounded-xl border border-border p-3">
                       <div className="flex items-center justify-between mb-2">
                         <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wide">Score ICP</p>
-                        <span className="text-xs font-black font-mono">{lead.icp_score || 0}/100</span>
+                        <span className="text-xs font-black font-mono">{lead.icp_score||0}/100</span>
                       </div>
                       <div className="h-2 bg-muted rounded-full overflow-hidden">
-                        <div className={cn("h-2 rounded-full transition-all duration-500",
-                          isHot ? "bg-gradient-to-r from-amber-400 to-orange-500" :
-                          isMed ? "bg-gradient-to-r from-blue-400 to-blue-600" : "bg-muted-foreground/30")}
-                          style={{ width: `${lead.icp_score || 0}%` }} />
+                        <div className={cn("h-2 rounded-full transition-all",
+                          isHot?"bg-gradient-to-r from-amber-400 to-orange-500":
+                          isMed?"bg-gradient-to-r from-blue-400 to-blue-600":"bg-muted-foreground/30")}
+                          style={{width:`${lead.icp_score||0}%`}}/>
                       </div>
                     </div>
                   </div>
@@ -644,8 +620,7 @@ export default function Prospeccao() {
         </div>
       )}
 
-      {/* Estado vazio */}
-      {!loading && !leads.length && !erro && (
+      {!loading&&!leads.length&&!erro&&(
         <div className="text-center py-20 animate-fade-in">
           <div className="text-5xl mb-4">{scope.icon}</div>
           <p className="text-base font-semibold mb-1">{scope.label} — {scope.sub}</p>
